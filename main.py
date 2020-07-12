@@ -1,15 +1,15 @@
 import time
 from api import SettingsQuery
-from basic import Clock
-WEBSITE = 'http://0.0.0.0:5000/api/stoic-clock/'
+from basic_noRPI import Clock
+WEBSITE = 'http://10.0.0.79:5000/api/stoic-clock/'
 CLOCK_ID = 'AAB'
 
 if __name__ == "__main__":
 
-    settings = SettingsQuery(interval=60, clock_id=CLOCK_ID, website=WEBSITE)
+    settings = SettingsQuery(interval=120, clock_id=CLOCK_ID, website=WEBSITE)
 
     clock = Clock()
-    clock.main(cathode_poison_method='wave', settings=settings)
+    clock.main(cathode_poison_method='slot', settings=settings)
 
     # while True:
     #

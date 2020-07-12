@@ -1,10 +1,10 @@
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import time
 from datetime import datetime, timedelta
 import random
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setwarnings(False)
+# GPIO.setmode(GPIO.BOARD)
+# GPIO.setwarnings(False)
 
 nixie_dict = {
     1: {'pins': [35, 36, 37, 38],
@@ -42,16 +42,16 @@ class Clock:
         self.now = datetime.now()
         self.nixie_state = {i: 0 for i in range(1, 7)}
 
-        for tube_num in self.nixie_dict.keys():
-            GPIO.setup(self.nixie_dict[tube_num]['pins'], GPIO.OUT)
+        # for tube_num in self.nixie_dict.keys():
+        #     GPIO.setup(self.nixie_dict[tube_num]['pins'], GPIO.OUT)
 
     def output_num(self, nixie_tube, number):
         pins = self.nixie_dict[nixie_tube]['pins']
         write_num = self.nixie_dict[nixie_tube]['num_map'][int(number)] if number != 'X' else 15
         binary = '{0:04b}'.format(write_num)
-        out_list = [GPIO.HIGH if int(bit) else GPIO.LOW for bit in binary]
-        # print(nixie_tube, number)
-        GPIO.output(pins, out_list)
+        #out_list = [GPIO.HIGH if int(bit) else GPIO.LOW for bit in binary]
+        print(nixie_tube, number)
+        #GPIO.output(pins, out_list)
         self.nixie_state[nixie_tube] = int(number) if number != 'X' else 0
 
     def main(self, cathode_poison_method, settings):
@@ -136,16 +136,11 @@ class Clock:
             if seconds:
                 start_ind = 1
             else:
-                hour = 'XX'# 15 is a mask for off
-                minute = now.hour
-                sec = now.minute
-                start_ind = 1
+                sec = 'XX'  # 15 is a mask for off
+                start_ind = 3
             if not twenty_four:
                 if int(hour) > 12:
-                    if seconds:
-                        hour = 'X' + str(int(hour) - 12)
-                    else:
-                        minute = 'X' + str(int(minute) - 12)
+                    hour = 'X' + str(int(hour) - 12)
             for i, time_chunk in enumerate([hour, minute, sec]):
                 if len(str(time_chunk)) < 2:
                     str_time.append("0" + str(time_chunk))
@@ -159,7 +154,7 @@ class Clock:
         if self.now.hour != self.last_hour:
             self.anti_poisoning = False
             self.last_hour = self.now.hour
-        if ((self.now.minute * 60 + self.now.second) >= self.rand_sec) and not self.anti_poisoning:
+        if ((self.now.minute * 60 + self.now.sec) >= self.rand_sec) and not self.anti_poisoning:
             poison_func()
             # print(f"Anti_poisoning ran @ {hour}:{sec}. Random number was {self.rand_sec}")
             self.rand_sec = random.randint(0, 3600)
@@ -240,8 +235,7 @@ class Clock:
         rand_list = [random.randint(20, 50) for i in range(6)]
         local_count = [0] * 6
         master_count = 0
-        done = [False] * 6
-        while not all(done):
+        while master_count < sum(rand_list):
             for nixie_tube in range(1, 7):
                 if local_count[nixie_tube-1] < rand_list[nixie_tube-1]:
                     try:
@@ -251,11 +245,12 @@ class Clock:
                     display_num = display_num if display_num < 10 else 0
                     self.output_num(nixie_tube, display_num)
                     local_count[nixie_tube - 1] += 1
-                else:
-                    done[nixie_tube - 1] = True
-            time.sleep(0.05 * (master_count+1)**(1/3))
+            time.sleep(0.1)
             master_count += 1
 
 
 if __name__ == "__main__":
+
     Clock().anti_cathode_poison_slot()
+
+

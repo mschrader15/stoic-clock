@@ -5,7 +5,7 @@ import logging
 import os
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-logging.basicConfig(filename=os.path.join(ROOT, 'api-error_log.txt'), filemode="a+", )
+logging.basicConfig(filename=os.path.join(ROOT, 'api-error_log.txt'), filemode="w+", )
 
 
 class SettingsQuery(object):

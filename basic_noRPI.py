@@ -1,10 +1,10 @@
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 import time
 from datetime import datetime, timedelta
 import random
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setwarnings(False)
+# GPIO.setmode(GPIO.BOARD)
+# GPIO.setwarnings(False)
 
 nixie_dict = {
     1: {'pins': [35, 36, 37, 38],
@@ -42,16 +42,16 @@ class Clock:
         self.now = datetime.now()
         self.nixie_state = {i: 0 for i in range(1, 7)}
 
-        for tube_num in self.nixie_dict.keys():
-            GPIO.setup(self.nixie_dict[tube_num]['pins'], GPIO.OUT)
+        # for tube_num in self.nixie_dict.keys():
+        #     GPIO.setup(self.nixie_dict[tube_num]['pins'], GPIO.OUT)
 
     def output_num(self, nixie_tube, number):
         pins = self.nixie_dict[nixie_tube]['pins']
         write_num = self.nixie_dict[nixie_tube]['num_map'][int(number)] if number != 'X' else 15
         binary = '{0:04b}'.format(write_num)
-        out_list = [GPIO.HIGH if int(bit) else GPIO.LOW for bit in binary]
-        # print(nixie_tube, number)
-        GPIO.output(pins, out_list)
+        # out_list = [GPIO.HIGH if int(bit) else GPIO.LOW for bit in binary]
+        print(nixie_tube, number)
+        # GPIO.output(pins, out_list)
         self.nixie_state[nixie_tube] = int(number) if number != 'X' else 0
 
     def main(self, cathode_poison_method, settings):
@@ -142,10 +142,7 @@ class Clock:
                 start_ind = 1
             if not twenty_four:
                 if int(hour) > 12:
-                    if seconds:
-                        hour = 'X' + str(int(hour) - 12)
-                    else:
-                        minute = 'X' + str(int(minute) - 12)
+                    hour = 'X' + str(int(hour) - 12)
             for i, time_chunk in enumerate([hour, minute, sec]):
                 if len(str(time_chunk)) < 2:
                     str_time.append("0" + str(time_chunk))

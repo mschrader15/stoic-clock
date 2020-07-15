@@ -1,0 +1,5 @@
+scp -P 2222 /home/max/Documents/death-clock/stoic-clock/basic.py stoicclock@10.0.0.65:/home/stoicclock/Clock
+scp -P 2222 /home/max/Documents/death-clock/stoic-clock/main.py stoicclock@10.0.0.65:/home/stoicclock/Clock
+
+ssh:
+ssh stoicclock@10.0.0.65 -p 2222

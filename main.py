@@ -1,7 +1,7 @@
 import time
 from api import SettingsQuery
 from basic_noRPI import Clock
-WEBSITE = 'http://10.0.0.79:5000/api/stoic-clock/'
+WEBSITE = 'http://10.0.0.79:5000/api/clock/'
 CLOCK_ID = 'AAB'
 
 if __name__ == "__main__":

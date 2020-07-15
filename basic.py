@@ -55,44 +55,29 @@ class Clock:
         self.nixie_state[nixie_tube] = int(number) if number != 'X' else 0
 
     def main(self, cathode_poison_method, settings):
-
         if cathode_poison_method == "wave":
             anti_poison_func = self.anti_cathode_poison_wave
         elif cathode_poison_method == "slot":
             anti_poison_func = self.anti_cathode_poison_slot
         else:
             anti_poison_func = self.anti_cathode_poison
-
-
-        display_time = True
-
         while True:
+            t0 = time.time()
             # Handle the settings:
-            try:
-                if settings.settings is not None:
-
-                    self.settings_manager(settings=settings.settings)
-                    if self.settings['death_display']:
-                        display_time = self.death_display()
-                else:
-                    display_time = True
-            except AttributeError:
-                display_time = True
-
-            seconds_display = self.settings['seconds_display'] if settings.settings is not None else True
-            twenty_four_hour = self.settings['twenty_four_hour'] if settings.settings is not None else True
-            offset = self.settings['time_offset'] if settings.settings is not None else '+0'
-
+            settings_error = self.settings_manager(settings=settings.settings)
+            display_time = self.death_display(settings_error)
+            seconds_display = self.settings['seconds_display'] if not settings_error else True
+            twenty_four_hour = self.settings['twenty_four_hour'] if not settings_error else True
+            offset = self.settings['time_offset'] if not settings_error else '+0'
             self.now = self.offset_manager(offset)
-
             self.basic_time(seconds=seconds_display,
                             twenty_four=twenty_four_hour,
                             display_time=display_time,
                             offset=offset)
-
-            self.poisoning_manager(poison_func=anti_poison_func)
-
-            time.sleep(0.2)
+            poisoning_ran = self.poisoning_manager(poison_func=anti_poison_func)
+            if not poisoning_ran:
+                sleep_time = max(1e-6, 1 - (time.time() - t0))
+                time.sleep(sleep_time)
 
     def offset_manager(self, offset):
         offset_method = offset[0]
@@ -101,30 +86,30 @@ class Clock:
         else:
             return datetime.now() - timedelta(hours=int(offset[1:]))
 
-    def death_display(self):
-        now = self.now
-        time_int = now.hour * 60 + now.minute
-        if (time_int >= self.settings['low_range']) and (time_int <= self.settings['high_range']):
-            if self.death_displayed:
-                seconds = (now - self.last_death_display_time).seconds
-                if seconds > self.settings['display_duration']:
-                    self.death_displayed = False
-                    self.last_death_display_time = now
-                    return True
+    def death_display(self, settings_error):
+        if not settings_error:
+            now = self.now
+            time_int = now.hour * 60 + now.minute
+            if (time_int >= self.settings['low_range']) and (time_int <= self.settings['high_range']):
+                if self.death_displayed:
+                    seconds = (now - self.last_death_display_time).seconds
+                    if seconds > self.settings['display_duration'] and (self.settings['display_interval'] > 0):
+                        self.death_displayed = False
+                        self.last_death_display_time = now
+                        return True
+                    else:
+                        return False
                 else:
-                    return False
-            else:
-                interval = (now - self.last_death_display_time).seconds
-                if interval >= self.settings['display_interval']:
-                    for i, num in enumerate(str(self.settings['days_till_death'])):
-                        self.output_num(i+2, num)
-                    self.output_num(1, 'X')
-                    self.death_displayed = True
-                    self.last_death_display_time = now
-                    return False
-                return True
-        else:
-            return True
+                    interval = (now - self.last_death_display_time).seconds
+                    if interval >= self.settings['display_interval']:
+                        for i, num in enumerate(str(self.settings['days_till_death'])):
+                            self.output_num(i + 2, num)
+                        self.output_num(1, 'X')
+                        self.death_displayed = True
+                        self.last_death_display_time = now
+                        return False
+                    return True
+        return True
 
     def basic_time(self, seconds=True, twenty_four=True, display_time=True, offset='+0'):
         now = self.now
@@ -136,7 +121,7 @@ class Clock:
             if seconds:
                 start_ind = 1
             else:
-                hour = 'XX'# 15 is a mask for off
+                hour = 'XX'  # 15 is a mask for off
                 minute = now.hour
                 sec = now.minute
                 start_ind = 1
@@ -153,33 +138,45 @@ class Clock:
                     str_time.append(str(time_chunk))
             time_string = "".join(str_time)
             for i, num in enumerate(time_string):
-                self.output_num(nixie_tube=i+start_ind, number=num)
+                self.output_num(nixie_tube=i + start_ind, number=num)
 
-    def poisoning_manager(self, poison_func,):
+    def poisoning_manager(self, poison_func, ):
         if self.now.hour != self.last_hour:
             self.anti_poisoning = False
             self.last_hour = self.now.hour
+            return False
         if ((self.now.minute * 60 + self.now.second) >= self.rand_sec) and not self.anti_poisoning:
             poison_func()
             # print(f"Anti_poisoning ran @ {hour}:{sec}. Random number was {self.rand_sec}")
             self.rand_sec = random.randint(0, 3600)
             self.anti_poisoning = True
+            return True
 
     def settings_manager(self, settings):
-        self.settings['days_till_death'] = self.get_days_till_death(settings['date_of_birth'], settings['death_age']) \
-            if settings['death_display'] else None
-        self.settings['death_display'] = settings['death_display']
-        self.settings['display_duration'] = int(settings['display_duration'])
-        self.settings['display_interval'] = int(settings['display_interval'])
-        self.settings['twenty_four_hour'] = settings['twenty_four_hour']
-        self.settings['seconds_display'] = settings['seconds_display']
-        self.settings['time_offset'] = settings['time_offset']
-        times = settings['time_range'].split("-")
-        time_range = []
-        for local_time in times:
-            time_range.append(int(local_time.split(':')[0]) * 60 + int(local_time.split(':')[1]))
-        self.settings['low_range'] = time_range[0]
-        self.settings['high_range'] = time_range[1]
+        settings_error = True
+        try:
+            if settings is not None:
+                self.settings['days_till_death'] = self.get_days_till_death(settings['date_of_birth'],
+                                                                            settings['death_age']) \
+                    if settings['death_display'] else None
+                self.settings['death_display'] = settings['death_display']
+                self.settings['display_duration'] = int(settings['display_duration'])
+                self.settings['display_interval'] = int(settings['display_interval'])
+                self.settings['twenty_four_hour'] = settings['twenty_four_hour']
+                self.settings['seconds_display'] = settings['seconds_display']
+                self.settings['time_offset'] = settings['time_offset']
+                times = settings['time_range'].split("-")
+                time_range = []
+                for local_time in times:
+                    time_range.append(int(local_time.split(':')[0]) * 60 + int(local_time.split(':')[1]))
+                self.settings['low_range'] = time_range[0]
+                self.settings['high_range'] = time_range[1]
+                settings_error = False
+                return settings_error
+            settings_error = True
+            return settings_error
+        except AttributeError:
+            return settings_error
 
     @staticmethod
     def get_days_till_death(birth_day_string, death_age):
@@ -237,7 +234,7 @@ class Clock:
 
     def anti_cathode_poison_slot(self):
 
-        rand_list = [random.randint(20, 50) for i in range(6)]
+        rand_list = [random.randint(40, 70) for i in range(6)]
         local_count = [0] * 6
         master_count = 0
         done = [False] * 6

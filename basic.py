@@ -212,6 +212,9 @@ class Clock:
                 last_value[local_i - 1] += j
 
     def anti_cathode_poison_wave(self):
+        for tube_num in range(1, 7):
+            self.output_num(nixie_tube=tube_num, number='X')
+
         for i in range(0, 10):
             if i % 2 > 0:
                 func = lambda x: 7 - x

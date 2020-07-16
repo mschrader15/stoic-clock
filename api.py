@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 import os
+import pickle
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(filename=os.path.join(ROOT, 'api-error_log.txt'), filemode="w+", )
@@ -33,6 +34,9 @@ class SettingsQuery(object):
             try:
                 r = requests.get(self.website + self.clock_id)
                 self.settings = r.json()
+                with open('settings.pickle', 'wb') as f:
+                    pickle.dump(self.settings, f, pickle.HIGHEST_PROTOCOL)
+
             except Exception:
                 logging.exception("Exception occurred")
             # print("thread loop settings ", self.settings)

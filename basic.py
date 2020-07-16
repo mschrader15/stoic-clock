@@ -2,6 +2,7 @@ import RPi.GPIO as GPIO
 import time
 from datetime import datetime, timedelta
 import random
+import pickle
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
@@ -149,34 +150,50 @@ class Clock:
             poison_func()
             # print(f"Anti_poisoning ran @ {hour}:{sec}. Random number was {self.rand_sec}")
             self.rand_sec = random.randint(0, 3600)
+            self.last_hour = self.now.hour
             self.anti_poisoning = True
+            self.death_displayed = False
             return True
 
     def settings_manager(self, settings):
         settings_error = True
         try:
             if settings is not None:
-                self.settings['days_till_death'] = self.get_days_till_death(settings['date_of_birth'],
-                                                                            settings['death_age']) \
-                    if settings['death_display'] else None
-                self.settings['death_display'] = settings['death_display']
-                self.settings['display_duration'] = int(settings['display_duration'])
-                self.settings['display_interval'] = int(settings['display_interval'])
-                self.settings['twenty_four_hour'] = settings['twenty_four_hour']
-                self.settings['seconds_display'] = settings['seconds_display']
-                self.settings['time_offset'] = settings['time_offset']
-                times = settings['time_range'].split("-")
-                time_range = []
-                for local_time in times:
-                    time_range.append(int(local_time.split(':')[0]) * 60 + int(local_time.split(':')[1]))
-                self.settings['low_range'] = time_range[0]
-                self.settings['high_range'] = time_range[1]
+                self.settings = self._interpret_settings(settings)
                 settings_error = False
-                return settings_error
-            settings_error = True
+            try:
+                with open('settings.pickle', 'rb') as f:
+                    self.settings = self._interpret_settings(pickle.load(f))
+                settings_error = False
+            except:
+                settings_error = True
             return settings_error
         except AttributeError:
+            try:
+                with open('settings.pickle', 'rb') as f:
+                    self.settings = self._interpret_settings(pickle.load(f))
+            except:
+                pass
             return settings_error
+
+    def _interpret_settings(self, settings):
+        local_settings = {}
+        local_settings['days_till_death'] = self.get_days_till_death(settings['date_of_birth'],
+                                                                    settings['death_age']) \
+            if settings['death_display'] else None
+        local_settings['death_display'] = settings['death_display']
+        local_settings['display_duration'] = int(settings['display_duration'])
+        local_settings['display_interval'] = int(settings['display_interval'])
+        local_settings['twenty_four_hour'] = settings['twenty_four_hour']
+        local_settings['seconds_display'] = settings['seconds_display']
+        local_settings['time_offset'] = settings['time_offset']
+        times = settings['time_range'].split("-")
+        time_range = []
+        for local_time in times:
+            time_range.append(int(local_time.split(':')[0]) * 60 + int(local_time.split(':')[1]))
+        local_settings['low_range'] = time_range[0]
+        local_settings['high_range'] = time_range[1]
+        return local_settings
 
     @staticmethod
     def get_days_till_death(birth_day_string, death_age):
@@ -214,30 +231,33 @@ class Clock:
     def anti_cathode_poison_wave(self):
         for tube_num in range(1, 7):
             self.output_num(nixie_tube=tube_num, number='X')
-
-        for i in range(0, 10):
-            if i % 2 > 0:
-                func = lambda x: 7 - x
-            else:
-                func = lambda x: x
-            for tube_num in range(1, 7):
-                local_tube_num = func(tube_num)
-                if tube_num > 1:
-                    self.output_num(nixie_tube=func(tube_num-1), number=i)
-                self.output_num(nixie_tube=local_tube_num, number=i)
-                time.sleep(0.05)
-        for i in range(0, 10):
-            loc_i = 9 - i
-            if loc_i % 2 > 0:
-                func = lambda x: 7 - x
-            else:
-                func = lambda x: x
-            for tube_num in range(1, 7):
-                local_tube_num = func(tube_num)
-                if tube_num > 1:
-                    self.output_num(nixie_tube=func(tube_num-1), number=i)
-                self.output_num(nixie_tube=local_tube_num, number=i)
-                time.sleep(0.05)
+        k = 0
+        limit = random.randint(2, 6)
+        while k < limit:
+            k += 1
+            for i in range(0, 10):
+                if i % 2 > 0:
+                    func = lambda x: 7 - x
+                else:
+                    func = lambda x: x
+                for tube_num in range(1, 7):
+                    local_tube_num = func(tube_num)
+                    if tube_num > 1:
+                        self.output_num(nixie_tube=func(tube_num-1), number=i)
+                    self.output_num(nixie_tube=local_tube_num, number=i)
+                    time.sleep(0.1)
+            for i in range(0, 10):
+                loc_i = 9 - i
+                if loc_i % 2 > 0:
+                    func = lambda x: 7 - x
+                else:
+                    func = lambda x: x
+                for tube_num in range(1, 7):
+                    local_tube_num = func(tube_num)
+                    if tube_num > 1:
+                        self.output_num(nixie_tube=func(tube_num-1), number=i)
+                    self.output_num(nixie_tube=local_tube_num, number=i)
+                    time.sleep(0.1)
 
     def anti_cathode_poison_slot(self):
 

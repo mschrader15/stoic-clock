@@ -3,3 +3,4 @@ archive/
 Clock/
 i2c/
 .idea/
+__pycache__/

@@ -222,6 +222,8 @@ class Clock:
                 func = lambda x: x
             for tube_num in range(1, 7):
                 local_tube_num = func(tube_num)
+                if tube_num > 1:
+                    self.output_num(nixie_tube=func(tube_num-1), number=i)
                 self.output_num(nixie_tube=local_tube_num, number=i)
                 time.sleep(0.05)
         for i in range(0, 10):
@@ -232,6 +234,8 @@ class Clock:
                 func = lambda x: x
             for tube_num in range(1, 7):
                 local_tube_num = func(tube_num)
+                if tube_num > 1:
+                    self.output_num(nixie_tube=func(tube_num-1), number=i)
                 self.output_num(nixie_tube=local_tube_num, number=i)
                 time.sleep(0.05)
 
